@@ -1,0 +1,33 @@
+#nav-bar {
+  padding-top: 2rem;
+}
+
+#main-content {
+  padding-top: 2rem;
+}
+
+.dash-graph {
+  zoom: 40%;
+}
+
+@media (min-width: 600px) {
+  .dash-graph {
+    zoom: 60%;
+  }
+
+@media (min-width: 1024px) {
+  .dash-graph {
+    zoom: 100%;
+  }
+  #main-content {
+    padding-left: 20vw;
+  }
+  #nav-bar {
+    padding-left: 2rem;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 20vw;
+    position: fixed;
+  }
+}
