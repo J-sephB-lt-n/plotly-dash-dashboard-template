@@ -21,7 +21,6 @@ from typing import Final
 
 import dash
 import dash_bootstrap_components as dbc
-from numpy import who
 import pandas as pd
 import plotly.express as px
 from dash import Dash, dash_table, Input, Output, dcc, html
@@ -31,28 +30,19 @@ EXPOSE_TO_PUBLIC_INTERNET: Final[bool] = True
 
 app = Dash(
     __name__,
-    external_stylesheets=[dbc.themes.CYBORG],
+    external_stylesheets=[dbc.themes.CYBORG, "assets/responsive_sizing.css"],
     suppress_callback_exceptions=True,
-    # external_scripts=[
-    #     "https://tailwindcss.com/",
-    #     {"src": "https://cdn.tailwindcss.com"},
-    # ],
     meta_tags=[
         {"name": "viewport", "content": "width=device-width, initial-scale=1.0"},
     ],
     title="Dash Dashboard Template",
 )
-# app.scripts.config.serve_locally = True
 server = app.server
-
 
 BasicAuth(
     app, {"admin": "password"}, secret_key="It4cQgcRTMxfNp4hdgliBIZ6BTErcddYzo/b7UDN"
 )
 
-# CONTENT_STYLE: Final[str] = "mt-8 overflow-x-scroll"
-# NAVBAR_STYLE: Final[str] = "fixed top-0 left-0 bottom-0 w-60"
-# NAVBAR_STYLE: Final[str] = "top-0 left-0 bottom-0 w-60"
 DATA_TABLE_STYLE: Final[dict] = {
     "page_size": 15,
     "style_as_list_view": True,
@@ -100,7 +90,7 @@ global_current_page_url = "/"
 
 
 def simulate_data(n_rows: int) -> dict[int, list[dict]]:
-    """TODO"""
+    """docstring TODO"""
     datasets = {}
     for dataset_id in range(1, 4):
         datasets[dataset_id] = []
@@ -127,7 +117,6 @@ navbar = dbc.Nav(
                 dbc.Col(
                     html.H2(
                         "Plotly Dash Dashboard Template",
-                        # className="display-4 pl-3 pt-3, ml-3 mt-3"
                     )
                 ),
                 dbc.Nav(
@@ -143,14 +132,12 @@ navbar = dbc.Nav(
                     ],
                     vertical=True,
                     pills=True,
-                    # className="ml-3",
                 ),
             ],
             direction="vertical",
         )
     ],
     id="nav-bar",
-    # className=NAVBAR_STYLE,
 )
 
 # content = html.Div(
@@ -190,12 +177,9 @@ content = dbc.Container(
         ),
         dbc.Container(id="page-content"),
     ],
-    # className=CONTENT_STYLE,
-    # style={"width": "800px", "overflow-x": "scroll"},
     id="main-content",
 )
 
-# app.layout = dbc.Container([dcc.Location(id="url"), sidebar, content])
 app.layout = dbc.Container(
     [dcc.Location(id="url"), navbar, content],
 )
@@ -232,7 +216,6 @@ def render_page_content(pathname, select_dataset1, select_dataset2, select_datas
                 f"{datetime_now()} Visited Welcome page",
                 html.Br(),
             ] + global_log_strings
-        # return html.P("Welcome text goes here")
         return dbc.Container(
             [
                 html.Br(),
@@ -260,7 +243,6 @@ def render_page_content(pathname, select_dataset1, select_dataset2, select_datas
                             "User activity on the dashboard is logged (`Dashboard Activity Log` page)."
                         ),
                     ],
-                    # className="list-decimal",
                 ),
                 html.Br(),
                 html.P("In future I want to add:"),
@@ -269,7 +251,6 @@ def render_page_content(pathname, select_dataset1, select_dataset2, select_datas
                         html.Li("Page loading animations"),
                         html.Li("User can switch between light and dark mode."),
                     ],
-                    # className="list-decimal",
                 ),
             ]
         )
@@ -280,7 +261,6 @@ def render_page_content(pathname, select_dataset1, select_dataset2, select_datas
                 f"{datetime_now()} Visited Raw Data page",
                 html.Br(),
             ] + global_log_strings
-        # return html.Div(
         return dbc.Stack(
             [
                 dbc.Col(
@@ -387,7 +367,6 @@ def render_page_content(pathname, select_dataset1, select_dataset2, select_datas
             html.Hr(),
             html.P(f"The page {pathname} does not exist."),
         ],
-        # className="p-3 bg-light rounded-3",
     )
 
 
