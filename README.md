@@ -22,7 +22,11 @@ python dash_app.py
 Deploy on a Google Cloud Run service:
 
 ```bash
-echo TODO
+GCP_PROJ_ID="your_google_cloud_project_id_here"
+GCP_REGION_NAME="region_in_which_to_deploy_service" # e.g. "africa-south1"
+GCP_ARTIFACT_REG_REPO_NAME="your-artifact-registry-repo-name"
+API_NAME="joes-example-dashboard"
+source build_deploy_cloud_run.sh
 ```
 
 Known issues:
