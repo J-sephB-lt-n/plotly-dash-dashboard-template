@@ -180,24 +180,26 @@ app.layout = dbc.Container(
 )
 
 
-# @app.callback(
-#     Output("user-session-data", "data"),
-#     Input("data-refresh-button", "n_clicks"),
-#     State("user-session-data", "data"),
-# )
-# def on_click(n_clicks, data):
-#     if n_clicks is None:
-#         # prevent the None callbacks is important with the store component.
-#         # you don't want to update the store for nothing.
-#         raise PreventUpdate
-#
-#     # Give a default data dict with 0 clicks if there's no data.
-#     data = {
-#         "available_datasets": db.list_available_datasets(),
-#         "datasets": {},
-#     }
-#
-#     return data
+@app.callback(
+    Output("user-session-data", "data"),
+    Input("data-refresh-button", "n_clicks"),
+    State("user-session-data", "data"),
+)
+def on_click(n_clicks, data):
+    if n_clicks is None:
+        # prevent the None callbacks is important with the store component.
+        # you don't want to update the store for nothing.
+        raise PreventUpdate
+
+    # Give a default data dict with 0 clicks if there's no data.
+    data = {
+        "available_datasets": db.list_available_datasets(),
+        "cached_datasets": {},
+    }
+
+    return data
+
+
 #
 #
 # @app.callback(
