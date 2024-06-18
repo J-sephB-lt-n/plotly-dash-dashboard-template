@@ -135,7 +135,9 @@ content = dbc.Container(
                             id="dropdown-dataset-selector",
                         ),
                         dbc.Button(
-                            "Refresh Data", id="data-refresh-button", n_clicks=0
+                            "Refresh Data",
+                            id={"type": "data-refresh-button", "index": 0},
+                            n_clicks=0,
                         ),
                     ],
                     direction="horizontal",
@@ -182,7 +184,7 @@ app.layout = dbc.Container(
 # in the user's session data
 @app.callback(
     Output("user-session-data", "data"),
-    Input("data-refresh-button", "n_clicks"),
+    Input({"type": "data-refresh-button", "index": ALL}, "n_clicks"),
     State("user-session-data", "data"),
 )
 def on_click(n_clicks, data):
@@ -226,18 +228,18 @@ def update_dataset_selector(_, data):
 
 # Popup telling the user that the latest data has been fetched
 # from the database
-@app.callback(
-    Output("data-refresh-popup", "is_open"),
-    [
-        Input("data-refresh-button", "n_clicks"),
-        Input("close-data-refresh-popup", "n_clicks"),
-    ],
-    [State("data-refresh-popup", "is_open")],
-)
-def toggle_modal(n1, n2, is_open):
-    if n1 or n2:
-        return not is_open
-    return is_open
+# @app.callback(
+#     Output("data-refresh-popup", "is_open"),
+#     [
+#         Input("data-refresh-button", "n_clicks"),
+#         Input("close-data-refresh-popup", "n_clicks"),
+#     ],
+#     [State("data-refresh-popup", "is_open")],
+# )
+# def toggle_modal(n1, n2, is_open):
+#     if n1 or n2:
+#         return not is_open
+#     return is_open
 
 
 # update the currently selected dataset
