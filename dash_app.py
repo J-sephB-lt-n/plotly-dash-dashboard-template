@@ -1,18 +1,18 @@
 """
 An example data dashboard built using Plotly Dash
+
+TODO:
+    The plan is:
+        - when someone chooses a dataset, check if 
 """
 
 import datetime
-from os import walk
-import random
-import string
 from typing import Final
 
 import dash
 import dash_bootstrap_components as dbc
-import pandas as pd
 import plotly.express as px
-from dash import Dash, dash_table, Input, Output, dcc, html
+from dash import Dash, dash_table, Input, Output, State, dcc, html
 from dash_auth import BasicAuth
 
 EXPOSE_TO_PUBLIC_INTERNET: Final[bool] = False
@@ -62,8 +62,8 @@ PLOT_STYLE: Final[dict] = {
         tickcolor="white",
         title_font=dict(color="white"),
         tickfont=dict(color="white"),
-    ),  # Y-axis style
-    "title_font": dict(color="white"),  # Title text color
+    ),
+    "title_font": {"color": "white"},
     "legend": dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
 }
 
@@ -71,39 +71,6 @@ PLOT_STYLE: Final[dict] = {
 def datetime_now_str() -> str:
     """Returns a string containing the current date and time (in user's system timezone)"""
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-
-global_log_strings = [f"{datetime_now_str()} Started session"]
-global_current_dataset_id = 1
-global_current_page_url = "/"
-
-
-def simulate_data(
-    n_datasets: int, n_groups: int, n_rows_per_group: int
-) -> dict[int, list[dict]]:
-    """Randomly simulates datasets"""
-    if n_groups > 26:
-        raise ValueError("Cannot simulate more than 26 groups")
-    datasets = {}
-    for idx in range(1, n_datasets + 1):
-        dataset_id = f"Data for period {idx}"
-        datasets[dataset_id] = []
-        for group, group_mean in (
-            (string.ascii_uppercase[i], random.randint(10, 100))
-            for i in range(n_groups)
-        ):
-            for t in range(n_rows_per_group):
-                datasets[dataset_id].append(
-                    {
-                        "time": t,
-                        "group": group,
-                        "amount": int(random.gauss(group_mean, 20)),
-                    }
-                )
-    return datasets
-
-
-data = simulate_data(n_datasets=4, n_groups=2, n_rows_per_group=100)
 
 
 navbar = dbc.Nav(
@@ -139,36 +106,50 @@ navbar = dbc.Nav(
 # content = html.Div(
 content = dbc.Container(
     [
+        dcc.Store(
+            # stores user-specific state, caches datasets, logs user activity
+            id="user-session-data"
+        ),
         dbc.Stack(
             [
-                dbc.DropdownMenu(
-                    label="Select Dataset",
-                    menu_variant="dark",
-                    children=[
-                        dbc.DropdownMenuItem(
-                            dataset_name,
-                            id=f"select-dataset-{dataset_idx}",
-                            n_clicks=0,
-                        )
-                        for dataset_idx, dataset_name in enumerate(data)
+                dbc.Stack(
+                    [
+                        dbc.DropdownMenu(
+                            label="Select Dataset",
+                            menu_variant="dark",
+                            # children=[
+                            #     dbc.DropdownMenuItem(
+                            #         dataset_name,
+                            #         id=f"select-dataset-{dataset_idx}",
+                            #         n_clicks=0,
+                            #     )
+                            #     for dataset_idx, dataset_name in enumerate(data)
+                            # ],
+                        ),
+                        dbc.Button(
+                            "Refresh Data", id="data-refresh-button", n_clicks=0
+                        ),
                     ],
-                    # children=[
-                    #     dbc.DropdownMenuItem(
-                    #         "Dataset 1",
-                    #         id="select-dataset-1",
-                    #         n_clicks=0,
-                    #     ),
-                    #     dbc.DropdownMenuItem(
-                    #         "Dataset 2",
-                    #         id="select-dataset-2",
-                    #         n_clicks=0,
-                    #     ),
-                    #     dbc.DropdownMenuItem(
-                    #         "Dataset 3",
-                    #         id="select-dataset-3",
-                    #         n_clicks=0,
-                    #     ),
-                    # ],
+                    direction="horizontal",
+                    gap=3,
+                ),
+                dbc.Modal(
+                    [
+                        dbc.ModalHeader(dbc.ModalTitle("Data Refreshed")),
+                        dbc.ModalBody(
+                            "The latest data has been fetched from the database"
+                        ),
+                        dbc.ModalFooter(
+                            dbc.Button(
+                                "Close",
+                                id="close-data-refresh-popup",
+                                className="ms-auto",
+                                n_clicks=0,
+                            )
+                        ),
+                    ],
+                    id="data-refresh-popup",
+                    is_open=False,
                 ),
                 dbc.Alert(
                     id="selected-dataset-alert",
@@ -190,47 +171,69 @@ app.layout = dbc.Container(
 
 
 @app.callback(
-    Output("selected-dataset-alert", "children"),
+    Output("data-refresh-popup", "is_open"),
     [
-        Input(f"select-dataset-{idx}", "n_clicks")
-        for idx, _ in enumerate(data)
-        # Input("select-dataset-1", "n_clicks"),
-        # Input("select-dataset-2", "n_clicks"),
-        # Input("select-dataset-3", "n_clicks"),
+        Input("data-refresh-button", "n_clicks"),
+        Input("close-data-refresh-popup", "n_clicks"),
     ],
+    [State("data-refresh-popup", "is_open")],
 )
-def update_selected_dataset(*args):
-    """docstring TODO"""
-    ctx = dash.callback_context
+def toggle_modal(n1, n2, is_open):
+    if n1 or n2:
+        return not is_open
+    return is_open
 
-    if not ctx.triggered:
-        return "No dataset selected"
-    else:
-        button_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-    if button_id[:15] == "select-dataset-":
-        selected_dataset_idx: int = int(button_id.split("-")[2])
-        return "Dataset Selected: " + list(data.keys())[selected_dataset_idx]
-    # if button_id == "select-dataset-1":
-    #     return "Dataset 1 selected"
-    # elif button_id == "select-dataset-2":
-    #     return "Dataset 2 selected"
-    # elif button_id == "select-dataset-3":
-    #     return "Dataset 3 selected"
+# @app.callback(
+#     Output("user-session-data", "data")
+#     # Output("selected-dataset-alert", "children"),
+#     [Input(f"select-dataset-{idx}", "n_clicks") for idx, _ in enumerate(data)],
+# )
+# def update_selected_dataset(*args):
+#     """docstring TODO"""
+#     ctx = dash.callback_context
+#
+#     if not ctx.triggered:
+#         return "No dataset selected"
+#     else:
+#         button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+#
+#     if button_id[:15] == "select-dataset-":
+#         selected_dataset_idx: int = int(button_id.split("-")[2])
+#         return "Dataset Selected: " + list(data.keys())[selected_dataset_idx]
+#
+
+# @app.callback(
+#     Output("selected-dataset-alert", "children"),
+#     [Input(f"select-dataset-{idx}", "n_clicks") for idx, _ in enumerate(data)],
+# )
+# def update_selected_dataset(*args):
+#     """docstring TODO"""
+#     ctx = dash.callback_context
+#
+#     if not ctx.triggered:
+#         return "No dataset selected"
+#     else:
+#         button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+#
+#     if button_id[:15] == "select-dataset-":
+#         selected_dataset_idx: int = int(button_id.split("-")[2])
+#         return "Dataset Selected: " + list(data.keys())[selected_dataset_idx]
 
 
 # @app.callback(
 #     Output("page-content", "children"),
 #     [
 #         Input("url", "pathname"),
-#         Input("select-dataset1", "n_clicks"),
-#         Input("select-dataset2", "n_clicks"),
-#         Input("select-dataset3", "n_clicks"),
+#         #         Input("select-dataset1", "n_clicks"),
+#         #         Input("select-dataset2", "n_clicks"),
+#         #         Input("select-dataset3", "n_clicks"),
 #     ],
 # )
-# def render_page_content(pathname, select_dataset1, select_dataset2, select_dataset3):
-#     global global_log_strings
-#     global global_current_dataset_id
+# def render_page_content(pathname):
+#     """docstring TODO"""
+# #     global global_log_strings
+# # #     global global_current_dataset_id
 #     global global_current_page_url
 #
 #     ctx = dash.callback_context
@@ -243,7 +246,7 @@ def update_selected_dataset(*args):
 #                 html.Br(),
 #             ] + global_log_strings
 #
-#     if pathname == "/":
+# if pathname == "/":
 #         if global_current_page_url != pathname:
 #             global_current_page_url = pathname
 #             global_log_strings = [
@@ -417,30 +420,30 @@ def update_selected_dataset(*args):
 #         return f"Dataset {ctx.triggered_id[-1]}"
 
 
-@app.callback(
-    Output("download-csv", "data"),
-    Input("download_csv_button", "n_clicks"),
-    prevent_initial_call=True,
-)
-def func(n_clicks):
-    global global_log_strings
-    global_log_strings = [
-        f"{datetime_now_str()} Downloaded dataset {global_current_dataset_id} (CSV)",
-        html.Br(),
-    ] + global_log_strings
-    csv_contents: str = (
-        ",".join(data[global_current_dataset_id][0].keys())
-        + "\n"
-        + "\n".join(
-            [
-                ",".join(str(col) for col in row.values())
-                for row in data[global_current_dataset_id]
-            ]
-        )
-    )
-    return dict(
-        content=csv_contents, filename=f"dataset_{global_current_dataset_id}.csv"
-    )
+# @app.callback(
+#     Output("download-csv", "data"),
+#     Input("download_csv_button", "n_clicks"),
+#     prevent_initial_call=True,
+# )
+# def func(n_clicks):
+#     global global_log_strings
+#     global_log_strings = [
+#         f"{datetime_now_str()} Downloaded dataset {global_current_dataset_id} (CSV)",
+#         html.Br(),
+#     ] + global_log_strings
+#     csv_contents: str = (
+#         ",".join(data[global_current_dataset_id][0].keys())
+#         + "\n"
+#         + "\n".join(
+#             [
+#                 ",".join(str(col) for col in row.values())
+#                 for row in data[global_current_dataset_id]
+#             ]
+#         )
+#     )
+#     return dict(
+#         content=csv_contents, filename=f"dataset_{global_current_dataset_id}.csv"
+#     )
 
 
 if __name__ == "__main__":
