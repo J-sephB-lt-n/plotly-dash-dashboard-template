@@ -7,13 +7,17 @@ TODO:
 """
 
 import datetime
+import json
+from os import walk
 from typing import Final
 
-import dash
 import dash_bootstrap_components as dbc
 import plotly.express as px
 from dash import Dash, dash_table, Input, Output, State, dcc, html
+from dash.exceptions import PreventUpdate
 from dash_auth import BasicAuth
+
+import db
 
 EXPOSE_TO_PUBLIC_INTERNET: Final[bool] = False
 
@@ -108,7 +112,12 @@ content = dbc.Container(
     [
         dcc.Store(
             # stores user-specific state, caches datasets, logs user activity
-            id="user-session-data"
+            id="user-session-data",
+            storage_type="session",
+            # data={
+            #     "available_datasets": db.list_available_datasets(),
+            #     "datasets": {},
+            # },
         ),
         dbc.Stack(
             [
@@ -117,14 +126,15 @@ content = dbc.Container(
                         dbc.DropdownMenu(
                             label="Select Dataset",
                             menu_variant="dark",
-                            # children=[
-                            #     dbc.DropdownMenuItem(
-                            #         dataset_name,
-                            #         id=f"select-dataset-{dataset_idx}",
-                            #         n_clicks=0,
-                            #     )
-                            #     for dataset_idx, dataset_name in enumerate(data)
-                            # ],
+                            children=[
+                                dbc.DropdownMenuItem(
+                                    dataset_name,
+                                    id=f"select-dataset-{dataset_name}",
+                                    n_clicks=0,
+                                )
+                                for dataset_name in db.list_available_datasets()
+                            ],
+                            id="dropdown-dataset-selector",
                         ),
                         dbc.Button(
                             "Refresh Data", id="data-refresh-button", n_clicks=0
@@ -168,6 +178,44 @@ content = dbc.Container(
 app.layout = dbc.Container(
     [dcc.Location(id="url"), navbar, content],
 )
+
+
+# @app.callback(
+#     Output("user-session-data", "data"),
+#     Input("data-refresh-button", "n_clicks"),
+#     State("user-session-data", "data"),
+# )
+# def on_click(n_clicks, data):
+#     if n_clicks is None:
+#         # prevent the None callbacks is important with the store component.
+#         # you don't want to update the store for nothing.
+#         raise PreventUpdate
+#
+#     # Give a default data dict with 0 clicks if there's no data.
+#     data = {
+#         "available_datasets": db.list_available_datasets(),
+#         "datasets": {},
+#     }
+#
+#     return data
+#
+#
+# @app.callback(
+#     Output("dropdown-dataset-selector", "children"),
+#     Input(
+#         "user-session-data", "modified_timestamp"
+#     ),  # # https://github.com/plotly/dash-renderer/pull/81
+#     State("user-session-data", "data"),
+# )
+# def update_dataset_selector(ts, data):
+#     return [
+#         dbc.DropdownMenuItem(
+#             dataset_name,
+#             id=f"select-dataset-{dataset_name}",
+#             n_clicks=0,
+#         )
+#         for dataset_name in data["available_datasets"]
+# ]
 
 
 @app.callback(

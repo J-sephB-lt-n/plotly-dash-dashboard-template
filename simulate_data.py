@@ -36,7 +36,7 @@ arg_parser.add_argument(
 )
 args = arg_parser.parse_args()
 
-db_path = Path("./db")
+db_path = Path("./database")
 files_to_delete = list(db_path.glob("*"))
 if files_to_delete:
     print(f"Deleting {len(files_to_delete):,} file(s) from {db_path}..", end=" ")
@@ -66,7 +66,7 @@ for dataset_id in dataset_ids:
             )
 
 for dataset_name, data in datasets.items():
-    with open(f"./db/{dataset_name}.csv", mode="w", encoding="utf-8") as file:
+    with open(f"./database/{dataset_name}.csv", mode="w", encoding="utf-8") as file:
         csv_writer = csv.DictWriter(
             file,
             fieldnames=["dataset", "time", "group", "amount"],
