@@ -180,6 +180,8 @@ app.layout = dbc.Container(
 )
 
 
+# Callback to update the list of available datasets
+# in the user's session data
 @app.callback(
     Output("user-session-data", "data"),
     Input("data-refresh-button", "n_clicks"),
@@ -201,24 +203,25 @@ def on_click(n_clicks, data):
     return data
 
 
-#
-#
-# @app.callback(
-#     Output("dropdown-dataset-selector", "children"),
-#     Input(
-#         "user-session-data", "modified_timestamp"
-#     ),  # # https://github.com/plotly/dash-renderer/pull/81
-#     State("user-session-data", "data"),
-# )
-# def update_dataset_selector(ts, data):
-#     return [
-#         dbc.DropdownMenuItem(
-#             dataset_name,
-#             id=f"select-dataset-{dataset_name}",
-#             n_clicks=0,
-#         )
-#         for dataset_name in data["available_datasets"]
-# ]
+# Callback to update the dataset dropdown list
+# (to reflect the updated list of available datasets)
+@app.callback(
+    Output("dropdown-dataset-selector", "children"),
+    Input(
+        "user-session-data", "modified_timestamp"
+    ),  # # https://github.com/plotly/dash-renderer/pull/81
+    State("user-session-data", "data"),
+)
+def update_dataset_selector(ts, data):
+    if data:
+        return [
+            dbc.DropdownMenuItem(
+                dataset_name,
+                id=f"select-dataset-{dataset_name}",
+                n_clicks=0,
+            )
+            for dataset_name in data["available_datasets"]
+        ]
 
 
 @app.callback(
