@@ -6,9 +6,9 @@ TODO:
         - when someone chooses a dataset, check if 
 """
 
+import argparse
 import datetime
 import json
-from os import walk
 from typing import Final
 
 import dash
@@ -21,7 +21,20 @@ from dash_auth import BasicAuth
 
 import db
 
-EXPOSE_TO_PUBLIC_INTERNET: Final[bool] = False
+arg_parser = argparse.ArgumentParser()
+arg_parser.add_argument(
+    "-d",
+    "--debug",
+    help="Add diagnostic information to the dashboard",
+    action="store_true",  # state if this flag is present
+)
+arg_parser.add_argument(
+    "-e",
+    "--expose_to_public_internet",
+    help="Make dashboard available (over http) over public internet",
+    action="store_true",  # state if this flag is present
+)
+args = arg_parser.parse_args()
 
 app = Dash(
     __name__,
@@ -110,8 +123,17 @@ navbar = dbc.Nav(
 )
 
 # content = html.Div(
+if args.debug:
+    debug_elements = [
+        dbc.Col(html.P(id="debug-refresh-button")),
+        dbc.Col(html.P(id="debug-select-dataset-dropdown")),
+        dbc.Col(html.P(id="debug-user-session-data")),
+    ]
+else:
+    debug_elements = []
 content = dbc.Container(
-    [
+    debug_elements
+    + [
         dcc.Store(
             # stores user-specific state, caches datasets, logs user activity
             id="user-session-data",
@@ -144,9 +166,6 @@ content = dbc.Container(
                     direction="horizontal",
                     gap=3,
                 ),
-                dbc.Col(html.P(id="debug-refresh-button")),
-                dbc.Col(html.P(id="debug-select-dataset-dropdown")),
-                dbc.Col(html.P(id="debug-user-session-data")),
                 dbc.Modal(
                     [
                         dbc.ModalHeader(dbc.ModalTitle("Data Refreshed")),
@@ -183,44 +202,43 @@ app.layout = dbc.Container(
     [dcc.Location(id="url"), navbar, content],
 )
 
+if args.debug:
 
-@app.callback(
-    Output("debug-refresh-button", "children"),
-    Input({"type": "data-refresh-button", "index": ALL}, "n_clicks"),
-)
-def on_refresh_click(n_clicks):
-    if ctx.triggered_id and ctx.triggered_id.type == "data-refresh-button":
-        return (
-            datetime.datetime.now().strftime("%H:%M:%S")
-            + " clicked data-refresh-button"
-        )
-
-
-@app.callback(
-    Output("debug-select-dataset-dropdown", "children"),
-    Input({"type": "single-dataset-selector", "index": ALL}, "n_clicks"),
-)
-def on_dataset_select_click(n_clicks):
-    if ctx.triggered_id and ctx.triggered_id.type == "single-dataset-selector":
-        return (
-            datetime.datetime.now().strftime("%H:%M:%S")
-            + " clickd select dataset button"
-        )
-
-
-@app.callback(
-    Output("debug-user-session-data", "children"),
-    Input(
-        # see: https://github.com/plotly/dash-renderer/pull/81
-        "user-session-data",
-        "modified_timestamp",
-    ),
-    State("user-session-data", "data"),
-)
-def debug_user_session_data(_, user_session_data):
-    return datetime.datetime.now().strftime("%H:%M:%S ") + json.dumps(
-        user_session_data, indent=4, default=str
+    @app.callback(
+        Output("debug-refresh-button", "children"),
+        Input({"type": "data-refresh-button", "index": ALL}, "n_clicks"),
     )
+    def on_refresh_click(n_clicks):
+        if ctx.triggered_id and ctx.triggered_id.type == "data-refresh-button":
+            return (
+                datetime.datetime.now().strftime("%H:%M:%S")
+                + " clicked data-refresh-button"
+            )
+
+    @app.callback(
+        Output("debug-select-dataset-dropdown", "children"),
+        Input({"type": "single-dataset-selector", "index": ALL}, "n_clicks"),
+    )
+    def on_dataset_select_click(n_clicks):
+        if ctx.triggered_id and ctx.triggered_id.type == "single-dataset-selector":
+            return (
+                datetime.datetime.now().strftime("%H:%M:%S")
+                + " clickd select dataset button"
+            )
+
+    @app.callback(
+        Output("debug-user-session-data", "children"),
+        Input(
+            # see: https://github.com/plotly/dash-renderer/pull/81
+            "user-session-data",
+            "modified_timestamp",
+        ),
+        State("user-session-data", "data"),
+    )
+    def debug_user_session_data(_, user_session_data):
+        return datetime.datetime.now().strftime("%H:%M:%S ") + json.dumps(
+            user_session_data, indent=4, default=str
+        )
 
 
 # Actions which update the user_session_data
@@ -580,10 +598,8 @@ def session_triggered_updates(_, user_session_data):
 #         content=csv_contents, filename=f"dataset_{global_current_dataset_id}.csv"
 #     )
 
-
 if __name__ == "__main__":
-    # run local dev server #
-    if EXPOSE_TO_PUBLIC_INTERNET:
+    if args.expose_to_public_internet:
         app.run_server(debug=False, host="0.0.0.0", port=8888)
     else:
         app.run_server(debug=True, port=8888)
