@@ -11,9 +11,11 @@ import json
 from os import walk
 from typing import Final
 
+import dash
 import dash_bootstrap_components as dbc
 import plotly.express as px
-from dash import Dash, dash_table, Input, Output, State, dcc, html
+from dash import Dash, dash_table, Input, Output, State, dcc, html, ctx
+from dash.dependencies import ALL
 from dash.exceptions import PreventUpdate
 from dash_auth import BasicAuth
 
@@ -114,10 +116,6 @@ content = dbc.Container(
             # stores user-specific state, caches datasets, logs user activity
             id="user-session-data",
             storage_type="session",
-            # data={
-            #     "available_datasets": db.list_available_datasets(),
-            #     "datasets": {},
-            # },
         ),
         dbc.Stack(
             [
@@ -203,27 +201,31 @@ def on_click(n_clicks, data):
     return data
 
 
-# Callback to update the dataset dropdown list
+# Callback to update the dataset selector dropdown
 # (to reflect the updated list of available datasets)
 @app.callback(
     Output("dropdown-dataset-selector", "children"),
     Input(
-        "user-session-data", "modified_timestamp"
-    ),  # # https://github.com/plotly/dash-renderer/pull/81
+        # see: https://github.com/plotly/dash-renderer/pull/81
+        "user-session-data",
+        "modified_timestamp",
+    ),
     State("user-session-data", "data"),
 )
-def update_dataset_selector(ts, data):
+def update_dataset_selector(_, data):
     if data:
         return [
             dbc.DropdownMenuItem(
                 dataset_name,
-                id=f"select-dataset-{dataset_name}",
+                id={"type": "single-dataset-selector", "index": idx},
                 n_clicks=0,
             )
-            for dataset_name in data["available_datasets"]
+            for idx, dataset_name in enumerate(data["available_datasets"])
         ]
 
 
+# Popup telling the user that the latest data has been fetched
+# from the database
 @app.callback(
     Output("data-refresh-popup", "is_open"),
     [
@@ -236,6 +238,25 @@ def toggle_modal(n1, n2, is_open):
     if n1 or n2:
         return not is_open
     return is_open
+
+
+# update the currently selected dataset
+# when a new dataset is selected
+# @app.callback(
+#     Output("user-session-data", "data"),
+#     Input({"type": "single-dataset-selector", "index": ALL}, "n_clicks"),
+#     State("user-session-data", "data"),
+#     prevent_initial_call=True,
+# )
+# def update_current_selected_dataset(_, data):
+#     # ctx.triggered_id looks like this: {'index': 0, 'type': 'single-dataset-selector'}
+#     triggered_id = ctx.triggered_id
+#     data = data
+#     if data and triggered_id:
+#         data["currently_selected_dataset"] = data["available_datasets"][
+#             triggered_id["index"]
+#         ]
+#         return data
 
 
 # @app.callback(
