@@ -193,6 +193,7 @@ def on_click(n_clicks, data):
 
     # Give a default data dict with 0 clicks if there's no data.
     data = {
+        "currently_selected_dataset": None,
         "available_datasets": db.list_available_datasets(),
         "cached_datasets": {},
     }
