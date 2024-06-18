@@ -116,7 +116,7 @@ content = dbc.Container(
             # stores user-specific state, caches datasets, logs user activity
             id="user-session-data",
             storage_type="session",
-            data={},
+            data={"available_datasets": []},
         ),
         dbc.Stack(
             [
@@ -262,26 +262,25 @@ def on_click(data_refresh_n_clicks, dataset_select_n_clicks, user_session_data):
 #
 
 
-# Callback to update the dataset selector dropdown
-# (to reflect the updated list of available datasets)
-# @app.callback(
-#     Output("dropdown-dataset-selector", "children"),
-#     Input(
-#         # see: https://github.com/plotly/dash-renderer/pull/81
-#         "user-session-data",
-#         "modified_timestamp",
-#     ),
-#     State("user-session-data", "data"),
-# )
-# def update_dataset_selector(_, user_session_data):
-#     return [
-#         dbc.DropdownMenuItem(
-#             dataset_name,
-#             id={"type": "single-dataset-selector", "index": idx},
-#             n_clicks=0,
-#         )
-#         for idx, dataset_name in enumerate(user_session_data["available_datasets"])
-#     ]
+# Elements that are updated when the user session data is updated
+@app.callback(
+    Output("dropdown-dataset-selector", "children"),
+    Input(
+        # see: https://github.com/plotly/dash-renderer/pull/81
+        "user-session-data",
+        "modified_timestamp",
+    ),
+    State("user-session-data", "data"),
+)
+def session_triggered_updates(_, user_session_data):
+    return [
+        dbc.DropdownMenuItem(
+            dataset_name,
+            id={"type": "single-dataset-selector", "index": idx},
+            n_clicks=0,
+        )
+        for idx, dataset_name in enumerate(user_session_data["available_datasets"])
+    ]
 
 
 # Popup telling the user that the latest data has been fetched
