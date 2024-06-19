@@ -13,6 +13,7 @@ from typing import Final
 
 import dash
 import dash_bootstrap_components as dbc
+import pandas as pd
 import plotly.express as px
 from dash import Dash, dash_table, Input, Output, State, dcc, html, ctx, Patch, ALL
 from dash.exceptions import PreventUpdate
@@ -236,7 +237,7 @@ if args.debug:
         return datetime.datetime.now().strftime("%H:%M:%S ") + str(user_session_data)
 
 
-# Actions which update the user_session_data
+# Actions triggered by global buttons
 @app.callback(
     [
         Output("dropdown-dataset-selector", "children"),
@@ -357,19 +358,19 @@ def render_page_content(pathname, user_session_data):
         )
 
     if pathname == "/data":
-        if (
-            user_session_data
+        if not (
+            user_session_data is not None
             and user_session_data["currently_selected_dataset"]
             in user_session_data["cached_datasets"]
         ):
+            current_dataset_table = dbc.Alert("Please select a dataset", color="light")
+        else:
             current_dataset_table = dash_table.DataTable(
                 user_session_data["cached_datasets"][
                     user_session_data["currently_selected_dataset"]
                 ],
                 **DATA_TABLE_STYLE,
             )
-        else:
-            current_dataset_table = html.P("Please select a dataset")
 
         return dbc.Stack(
             [
@@ -385,90 +386,94 @@ def render_page_content(pathname, user_session_data):
             gap=3,
         )
 
+    if pathname == "/dataviz":
+        if not (
+            user_session_data is not None
+            and user_session_data["currently_selected_dataset"]
+            in user_session_data["cached_datasets"]
+        ):
+            return dbc.Alert("Please select a dataset", color="light")
+        else:
+            current_dataset_name = user_session_data["currently_selected_dataset"]
+            current_dataset = user_session_data["cached_datasets"][current_dataset_name]
+            selected_dataset_df = pd.DataFrame(current_dataset).sort_values("group")
+            return dbc.Stack(
+                [
+                    dbc.Col(
+                        dcc.Graph(
+                            figure=px.line(
+                                selected_dataset_df,
+                                x="time",
+                                y="amount",
+                                color="group",
+                                title="Line Plots",
+                            ).update_layout(**PLOT_STYLE),
+                        ),
+                    ),
+                    dbc.Col(
+                        dcc.Graph(
+                            figure=px.bar(
+                                selected_dataset_df,
+                                x="time",
+                                y="amount",
+                                color="group",
+                                title="Stacked Bar Chart",
+                            ).update_layout(**PLOT_STYLE)
+                        )
+                    ),
+                    dbc.Stack(
+                        [
+                            dbc.Col(
+                                dcc.Graph(
+                                    figure=px.histogram(
+                                        selected_dataset_df,
+                                        x="amount",
+                                        # y="",
+                                        color="group",
+                                        marginal="box",
+                                        title="Overlaid Histograms",
+                                    ).update_layout(**PLOT_STYLE)
+                                    # figure=ff.create_distplot(
+                                    #     [
+                                    #         [
+                                    #             x["amount"]
+                                    #             for x in data[global_current_dataset_id]
+                                    #             if x["group"] == group
+                                    #         ]
+                                    #         for group in ("A", "B", "C")
+                                    #     ],
+                                    #     ["A", "B", "C"],
+                                    # ).update_layout(**PLOT_STYLE)
+                                ),
+                                width=8,
+                            ),
+                            dbc.Col(
+                                dcc.Graph(
+                                    figure=px.pie(
+                                        selected_dataset_df.groupby("group")
+                                        .agg(sum_amount=("amount", "sum"))
+                                        .reset_index()
+                                        .sort_values("group"),
+                                        values="sum_amount",
+                                        names="group",
+                                        title="Pie Chart",
+                                    ).update_layout(**PLOT_STYLE)
+                                ),
+                                width=4,
+                            ),
+                        ],
+                        direction="horizontal",
+                    ),
+                ],
+                direction="vertical",
+                gap=0,
+                id="plot-stack",
+            )
 
-#     elif pathname == "/dataviz":
-#         if global_current_page_url != pathname:
-#             global_current_page_url = pathname
-#             global_log_strings = [
-#                 f"{datetime_now_str()} Visited Data Visualisations page",
-#                 html.Br(),
-#             ] + global_log_strings
-#         selected_dataset_df = pd.DataFrame(data[global_current_dataset_id])
-#         return dbc.Stack(
-#             [
-#                 dbc.Col(
-#                     dcc.Graph(
-#                         figure=px.line(
-#                             selected_dataset_df,
-#                             x="time",
-#                             y="amount",
-#                             color="group",
-#                             title="Line Plots",
-#                         ).update_layout(**PLOT_STYLE),
-#                     ),
-#                 ),
-#                 dbc.Col(
-#                     dcc.Graph(
-#                         figure=px.bar(
-#                             selected_dataset_df,
-#                             x="time",
-#                             y="amount",
-#                             color="group",
-#                             title="Stacked Bar Chart",
-#                         ).update_layout(**PLOT_STYLE)
-#                     )
-#                 ),
-#                 dbc.Stack(
-#                     [
-#                         dbc.Col(
-#                             dcc.Graph(
-#                                 figure=px.histogram(
-#                                     data[global_current_dataset_id],
-#                                     x="amount",
-#                                     # y="",
-#                                     color="group",
-#                                     marginal="box",
-#                                     title="Overlaid Histograms",
-#                                 ).update_layout(**PLOT_STYLE)
-#                                 # figure=ff.create_distplot(
-#                                 #     [
-#                                 #         [
-#                                 #             x["amount"]
-#                                 #             for x in data[global_current_dataset_id]
-#                                 #             if x["group"] == group
-#                                 #         ]
-#                                 #         for group in ("A", "B", "C")
-#                                 #     ],
-#                                 #     ["A", "B", "C"],
-#                                 # ).update_layout(**PLOT_STYLE)
-#                             ),
-#                             width=8,
-#                         ),
-#                         dbc.Col(
-#                             dcc.Graph(
-#                                 figure=px.pie(
-#                                     selected_dataset_df.groupby("group")
-#                                     .agg(sum_amount=("amount", "sum"))
-#                                     .reset_index(),
-#                                     values="sum_amount",
-#                                     names="group",
-#                                     title="Pie Chart",
-#                                 ).update_layout(**PLOT_STYLE)
-#                             ),
-#                             width=4,
-#                         ),
-#                     ],
-#                     direction="horizontal",
-#                 ),
-#             ],
-#             direction="vertical",
-#             gap=0,
-#             id="plot-stack",
-#         )
-#     elif pathname == "/log":
-#         if global_current_page_url != pathname:
-#             global_current_page_url = pathname
-#         return html.P(global_log_strings)
+    if pathname == "/log":
+        return html.P("!! this page still under construction !!")
+
+
 #     # If the user tries to reach a different page, return a 404 message
 #     return html.Div(
 #         [
