@@ -203,7 +203,6 @@ if args.debug:
             Input("refresh-data-button", "n_clicks"),
             Input({"type": "selected-dataset", "index": ALL}, "n_clicks"),
         ],
-        prevent_initial_call=True,
     )
     def on_refresh_click(*args):
         button_clicked = ctx.triggered_id
@@ -267,12 +266,15 @@ def update_user_session(data_refresh_n_clicks, data_select_n_clicks, user_sessio
         }
 
     if hasattr(button_clicked, "type") and button_clicked.type == "selected-dataset":
-        user_session_data["currently_selected_dataset"] = user_session_data[
-            "available_datasets"
-        ][button_clicked.index]
-        current_dataset_alert_text = (
-            f'Dataset Selected: [{user_session_data["currently_selected_dataset"]}]'
-        )
+        selected_dataset_name = user_session_data["available_datasets"][
+            button_clicked.index
+        ]
+        user_session_data["currently_selected_dataset"] = selected_dataset_name
+        current_dataset_alert_text = f"Dataset Selected: [ {selected_dataset_name} ]"
+        if selected_dataset_name not in user_session_data["cached_datasets"]:
+            user_session_data["cached_datasets"][selected_dataset_name] = (
+                db.get_dataset(selected_dataset_name)
+            )
 
     # patched_children = Patch()
     patched_children = []
@@ -324,21 +326,21 @@ def update_user_session(data_refresh_n_clicks, data_select_n_clicks, user_sessio
 #     return patched_children
 #
 
+
 # Popup telling the user that the latest data has been fetched
 # from the database
-# @app.callback(
-#     Output("data-refresh-popup", "is_open"),
-#     [
-#         Input({"type": "data-refresh-button", "index": ALL}, "n_clicks"),
-#         # Input("data-refresh-button", "n_clicks"),
-#         Input("close-data-refresh-popup", "n_clicks"),
-#     ],
-#     [State("data-refresh-popup", "is_open")],
-# )
-# def toggle_modal(n1, n2, is_open):
-#     if n1 or n2:
-#         return not is_open
-#     return is_open
+@app.callback(
+    Output("data-refresh-popup", "is_open"),
+    [
+        Input("refresh-data-button", "n_clicks"),
+        Input("close-data-refresh-popup", "n_clicks"),
+    ],
+    [State("data-refresh-popup", "is_open")],
+)
+def toggle_modal(n1, n2, is_open):
+    if n1 or n2:
+        return not is_open
+    return is_open
 
 
 # update the currently selected dataset
