@@ -43,6 +43,7 @@ app = Dash(
         {"name": "viewport", "content": "width=device-width, initial-scale=1.0"},
     ],
     title="Dash Dashboard Template",
+    suppress_callback_exceptions=True,
 )
 server = app.server
 
@@ -493,30 +494,36 @@ def render_page_content(pathname, user_session_data):
 #         return f"Dataset {ctx.triggered_id[-1]}"
 
 
-# @app.callback(
-#     Output("download-csv", "data"),
-#     Input("download_csv_button", "n_clicks"),
-#     prevent_initial_call=True,
-# )
-# def func(n_clicks):
-#     global global_log_strings
-#     global_log_strings = [
-#         f"{datetime_now_str()} Downloaded dataset {global_current_dataset_id} (CSV)",
-#         html.Br(),
-#     ] + global_log_strings
-#     csv_contents: str = (
-#         ",".join(data[global_current_dataset_id][0].keys())
-#         + "\n"
-#         + "\n".join(
-#             [
-#                 ",".join(str(col) for col in row.values())
-#                 for row in data[global_current_dataset_id]
-#             ]
-#         )
-#     )
-#     return dict(
-#         content=csv_contents, filename=f"dataset_{global_current_dataset_id}.csv"
-#     )
+@app.callback(
+    Output("download-csv", "data"),
+    Input("download_csv_button", "n_clicks"),
+    State("user-session-data", "data"),
+    prevent_initial_call=True,
+)
+def download_csv(n_clicks, user_session_data):
+    if (
+        user_session_data
+        and user_session_data["currently_selected_dataset"]
+        in user_session_data["cached_datasets"]
+    ):
+        current_dataset_name = user_session_data["currently_selected_dataset"]
+        current_dataset = user_session_data["cached_datasets"].get(current_dataset_name)
+        if current_dataset:
+            csv_contents: str = (
+                ",".join(current_dataset[0].keys())
+                + "\n"
+                + "\n".join(
+                    [
+                        ",".join(str(col) for col in row.values())
+                        for row in current_dataset
+                    ]
+                )
+            )
+            return dict(
+                content=csv_contents,
+                filename=f"dataset_{current_dataset_name}.csv",
+            )
+
 
 if __name__ == "__main__":
     if args.expose_to_public_internet:
