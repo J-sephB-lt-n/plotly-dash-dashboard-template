@@ -179,7 +179,7 @@ content = dbc.Container(
                 dbc.Alert(
                     id="selected-dataset-alert",
                     color="light",
-                    children="No dataset selected",
+                    # children="No dataset selected",
                 ),
             ],
             direction="vertical",
@@ -219,28 +219,6 @@ if args.debug:
                 + str(button_clicked)
             )
 
-    # @app.callback(
-    #     Output("debug-select-dataset-dropdown", "children"),
-    #     Input({"type": "single-dataset-selector", "index": ALL}, "n_clicks"),
-    #     prevent_initial_call=True,
-    # )
-    # def on_dataset_select_click(n_clicks):
-    #     if ctx.triggered_id and ctx.triggered_id.type == "single-dataset-selector":
-    #         return (
-    #             datetime.datetime.now().strftime("%H:%M:%S.%f")[:-3]
-    #             + " clicked select dataset button"
-    #         )
-    #
-    # @app.callback(
-    #     Output("debug-triggered-prop-ids", "children"),
-    #     [
-    #         Input({"type": "data-refresh-button", "index": ALL}, "n_clicks"),
-    #         Input({"type": "single-dataset-selector", "index": ALL}, "n_clicks"),
-    #     ],
-    # )
-    # def debug_triggered_prop_ids(data_refresh_n_clicks, dataset_select_n_clicks):
-    #     return json.dumps(ctx.triggered_prop_ids)
-
     @app.callback(
         Output("debug-user-session-data", "children"),
         Input(
@@ -258,6 +236,7 @@ if args.debug:
 @app.callback(
     [
         Output("dropdown-dataset-selector", "children"),
+        Output("selected-dataset-alert", "children"),
         Output("user-session-data", "data"),
     ],
     [
@@ -271,6 +250,7 @@ def update_user_session(data_refresh_n_clicks, data_select_n_clicks, user_sessio
         # prevent the None callbacks is important with the store component.
         # you don't want to update the store for nothing.
         raise PreventUpdate
+    current_dataset_alert_text = "No dataset selected"
 
     user_session_data = user_session_data or {
         "currently_selected_dataset": None,
@@ -290,8 +270,11 @@ def update_user_session(data_refresh_n_clicks, data_select_n_clicks, user_sessio
         user_session_data["currently_selected_dataset"] = user_session_data[
             "available_datasets"
         ][button_clicked.index]
+        current_dataset_alert_text = (
+            f'Dataset Selected: [{user_session_data["currently_selected_dataset"]}]'
+        )
 
-    patched_children = Patch()
+    # patched_children = Patch()
     patched_children = []
     for dataset_index, dataset_name in enumerate(
         user_session_data["available_datasets"]
@@ -304,7 +287,7 @@ def update_user_session(data_refresh_n_clicks, data_select_n_clicks, user_sessio
             )
         )
 
-    return patched_children, user_session_data
+    return patched_children, current_dataset_alert_text, user_session_data
 
 
 # Elements that are updated when the user session data is updated
