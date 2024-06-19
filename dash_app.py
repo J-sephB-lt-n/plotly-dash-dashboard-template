@@ -14,8 +14,7 @@ from typing import Final
 import dash
 import dash_bootstrap_components as dbc
 import plotly.express as px
-from dash import Dash, dash_table, Input, Output, State, dcc, html, ctx
-from dash.dependencies import ALL
+from dash import Dash, dash_table, Input, Output, State, dcc, html, ctx, Patch, ALL
 from dash.exceptions import PreventUpdate
 from dash_auth import BasicAuth
 
@@ -125,8 +124,7 @@ navbar = dbc.Nav(
 # content = html.Div(
 if args.debug:
     debug_elements = [
-        dbc.Col(html.P(id="debug-refresh-button")),
-        dbc.Col(html.P(id="debug-select-dataset-dropdown")),
+        dbc.Col(html.P(id="debug-buttons")),
         dbc.Col(html.P(id="debug-user-session-data")),
     ]
 else:
@@ -147,24 +145,18 @@ content = dbc.Container(
                         dbc.DropdownMenu(
                             label="Select Dataset",
                             menu_variant="dark",
-                            # children=[
-                            #     dbc.DropdownMenuItem(
-                            #         dataset_name,
-                            #         id=f"select-dataset-{dataset_name}",
-                            #         n_clicks=0,
-                            #     )
-                            #     for dataset_name in db.list_available_datasets()
-                            # ],
                             id="dropdown-dataset-selector",
+                            children=[],
                         ),
                         dbc.Button(
                             "Refresh Data",
-                            id={"type": "data-refresh-button", "index": 0},
+                            id="refresh-data-button",
                             n_clicks=0,
                         ),
                     ],
                     direction="horizontal",
                     gap=3,
+                    id="content-row1-stack",
                 ),
                 dbc.Modal(
                     [
@@ -192,6 +184,7 @@ content = dbc.Container(
             ],
             direction="vertical",
             gap=3,
+            id="content-stack",
         ),
         dbc.Container(id="page-content"),
     ],
@@ -205,26 +198,48 @@ app.layout = dbc.Container(
 if args.debug:
 
     @app.callback(
-        Output("debug-refresh-button", "children"),
-        Input({"type": "data-refresh-button", "index": ALL}, "n_clicks"),
+        Output("debug-buttons", "children"),
+        [
+            Input("refresh-data-button", "n_clicks"),
+            Input({"type": "selected-dataset", "index": ALL}, "n_clicks"),
+        ],
+        prevent_initial_call=True,
     )
-    def on_refresh_click(n_clicks):
-        if ctx.triggered_id and ctx.triggered_id.type == "data-refresh-button":
+    def on_refresh_click(*args):
+        button_clicked = ctx.triggered_id
+        if button_clicked == "refresh-data-button":
             return (
-                datetime.datetime.now().strftime("%H:%M:%S")
+                datetime.datetime.now().strftime("%H:%M:%S.%f")[:-3]
                 + " clicked data-refresh-button"
             )
-
-    @app.callback(
-        Output("debug-select-dataset-dropdown", "children"),
-        Input({"type": "single-dataset-selector", "index": ALL}, "n_clicks"),
-    )
-    def on_dataset_select_click(n_clicks):
-        if ctx.triggered_id and ctx.triggered_id.type == "single-dataset-selector":
+        else:
             return (
-                datetime.datetime.now().strftime("%H:%M:%S")
-                + " clickd select dataset button"
+                datetime.datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                + " "
+                + str(button_clicked)
             )
+
+    # @app.callback(
+    #     Output("debug-select-dataset-dropdown", "children"),
+    #     Input({"type": "single-dataset-selector", "index": ALL}, "n_clicks"),
+    #     prevent_initial_call=True,
+    # )
+    # def on_dataset_select_click(n_clicks):
+    #     if ctx.triggered_id and ctx.triggered_id.type == "single-dataset-selector":
+    #         return (
+    #             datetime.datetime.now().strftime("%H:%M:%S.%f")[:-3]
+    #             + " clicked select dataset button"
+    #         )
+    #
+    # @app.callback(
+    #     Output("debug-triggered-prop-ids", "children"),
+    #     [
+    #         Input({"type": "data-refresh-button", "index": ALL}, "n_clicks"),
+    #         Input({"type": "single-dataset-selector", "index": ALL}, "n_clicks"),
+    #     ],
+    # )
+    # def debug_triggered_prop_ids(data_refresh_n_clicks, dataset_select_n_clicks):
+    #     return json.dumps(ctx.triggered_prop_ids)
 
     @app.callback(
         Output("debug-user-session-data", "children"),
@@ -236,70 +251,95 @@ if args.debug:
         State("user-session-data", "data"),
     )
     def debug_user_session_data(_, user_session_data):
-        return datetime.datetime.now().strftime("%H:%M:%S ") + json.dumps(
-            user_session_data, indent=4, default=str
-        )
+        return datetime.datetime.now().strftime("%H:%M:%S ") + str(user_session_data)
 
 
 # Actions which update the user_session_data
 @app.callback(
-    Output("user-session-data", "data"),
     [
-        Input({"type": "data-refresh-button", "index": ALL}, "n_clicks"),
-        Input({"type": "single-dataset-selector", "index": ALL}, "n_clicks"),
+        Output("dropdown-dataset-selector", "children"),
+        Output("user-session-data", "data"),
+    ],
+    [
+        Input("refresh-data-button", "n_clicks"),
+        Input({"type": "selected-dataset", "index": ALL}, "n_clicks"),
     ],
     State("user-session-data", "data"),
 )
-def on_click(data_refresh_n_clicks, dataset_select_n_clicks, user_session_data):
-    if data_refresh_n_clicks and dataset_select_n_clicks is None:
+def update_user_session(data_refresh_n_clicks, data_select_n_clicks, user_session_data):
+    if data_refresh_n_clicks is None or data_select_n_clicks is None:
         # prevent the None callbacks is important with the store component.
         # you don't want to update the store for nothing.
         raise PreventUpdate
 
-    user_session_data = user_session_data | {
+    user_session_data = user_session_data or {
         "currently_selected_dataset": None,
         "available_datasets": db.list_available_datasets(),
         "cached_datasets": {},
     }
 
-    if ctx.triggered_id and ctx.triggered_id.type == "data-refresh-button":
+    button_clicked = ctx.triggered_id
+    if button_clicked == "refresh-data-button":
         user_session_data = {
             "currently_selected_dataset": None,
             "available_datasets": db.list_available_datasets(),
             "cached_datasets": {},
         }
 
-    return user_session_data
+    if hasattr(button_clicked, "type") and button_clicked.type == "selected-dataset":
+        user_session_data["currently_selected_dataset"] = user_session_data[
+            "available_datasets"
+        ][button_clicked.index]
 
+    patched_children = Patch()
+    patched_children = []
+    for dataset_index, dataset_name in enumerate(
+        user_session_data["available_datasets"]
+    ):
+        patched_children.append(
+            dbc.DropdownMenuItem(
+                dataset_name,
+                id={"type": "selected-dataset", "index": dataset_index},
+                n_clicks=0,
+            )
+        )
 
-#     if ctx.triggered_id and ctx.triggered_id.type == "single-dataset-selector":
-#         data = data
-#         data["currently_selected_dataset"] = ctx.triggered_id.index
-#
-#     return data
-#
+    return patched_children, user_session_data
 
 
 # Elements that are updated when the user session data is updated
-@app.callback(
-    Output("dropdown-dataset-selector", "children"),
-    Input(
-        # see: https://github.com/plotly/dash-renderer/pull/81
-        "user-session-data",
-        "modified_timestamp",
-    ),
-    State("user-session-data", "data"),
-)
-def session_triggered_updates(_, user_session_data):
-    return [
-        dbc.DropdownMenuItem(
-            dataset_name,
-            id={"type": "single-dataset-selector", "index": idx},
-            n_clicks=0,
-        )
-        for idx, dataset_name in enumerate(user_session_data["available_datasets"])
-    ]
-
+# @app.callback(
+#     Output("dropdown-dataset-selector", "children"),
+#     Input(
+#         # see: https://github.com/plotly/dash-renderer/pull/81
+#         "user-session-data",
+#         "modified_timestamp",
+#     ),
+#     State("user-session-data", "data"),
+# )
+# def session_triggered_updates(_, user_session_data):
+#     # return [
+#     #     dbc.DropdownMenuItem(
+#     #         dataset_name,
+#     #         id=f"select-dataset-{dataset_name}",
+#     #         n_clicks=0,
+#     #     )
+#     #     for dataset_name in user_session_data["available_datasets"]
+#     # ]
+#     patched_children = Patch()
+#     patched_children = []
+#     for dataset_index, dataset_name in enumerate(
+#         user_session_data["available_datasets"]
+#     ):
+#         patched_children.append(
+#             dbc.DropdownMenuItem(
+#                 dataset_name,
+#                 id={"type": "selected-dataset", "index": dataset_index},
+#                 n_clicks=0,
+#             )
+#         )
+#     return patched_children
+#
 
 # Popup telling the user that the latest data has been fetched
 # from the database
