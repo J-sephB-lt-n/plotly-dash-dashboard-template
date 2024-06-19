@@ -292,41 +292,6 @@ def update_user_session(data_refresh_n_clicks, data_select_n_clicks, user_sessio
     return patched_children, current_dataset_alert_text, user_session_data
 
 
-# Elements that are updated when the user session data is updated
-# @app.callback(
-#     Output("dropdown-dataset-selector", "children"),
-#     Input(
-#         # see: https://github.com/plotly/dash-renderer/pull/81
-#         "user-session-data",
-#         "modified_timestamp",
-#     ),
-#     State("user-session-data", "data"),
-# )
-# def session_triggered_updates(_, user_session_data):
-#     # return [
-#     #     dbc.DropdownMenuItem(
-#     #         dataset_name,
-#     #         id=f"select-dataset-{dataset_name}",
-#     #         n_clicks=0,
-#     #     )
-#     #     for dataset_name in user_session_data["available_datasets"]
-#     # ]
-#     patched_children = Patch()
-#     patched_children = []
-#     for dataset_index, dataset_name in enumerate(
-#         user_session_data["available_datasets"]
-#     ):
-#         patched_children.append(
-#             dbc.DropdownMenuItem(
-#                 dataset_name,
-#                 id={"type": "selected-dataset", "index": dataset_index},
-#                 n_clicks=0,
-#             )
-#         )
-#     return patched_children
-#
-
-
 # Popup telling the user that the latest data has been fetched
 # from the database
 @app.callback(
@@ -343,130 +308,54 @@ def toggle_modal(n1, n2, is_open):
     return is_open
 
 
-# update the currently selected dataset
-# when a new dataset is selected
-# @app.callback(
-#     Output("user-session-data", "data"),
-#     Input({"type": "single-dataset-selector", "index": ALL}, "n_clicks"),
-#     State("user-session-data", "data"),
-#     prevent_initial_call=True,
-# )
-# def update_current_selected_dataset(_, data):
-#     # ctx.triggered_id looks like this: {'index': 0, 'type': 'single-dataset-selector'}
-#     triggered_id = ctx.triggered_id
-#     data = data
-#     if data and triggered_id:
-#         data["currently_selected_dataset"] = data["available_datasets"][
-#             triggered_id["index"]
-#         ]
-#         return data
+@app.callback(
+    Output("page-content", "children"),
+    [
+        Input("url", "pathname"),
+        #         Input("select-dataset1", "n_clicks"),
+        #         Input("select-dataset2", "n_clicks"),
+        #         Input("select-dataset3", "n_clicks"),
+    ],
+)
+def render_page_content(pathname):
+    """docstring TODO"""
+    if pathname == "/":
+        return dbc.Container(
+            [
+                html.Br(),
+                "This is an example of a dashboard built in python using Plotly Dash.",
+                html.Br(),
+                html.Br(),
+                "The current features are:",
+                html.Ul(
+                    [
+                        html.Li(
+                            "Dataset selector (user can choose their dataset) - at top of every page."
+                        ),
+                        html.Li(
+                            "User dashboard state is stored in their browser session storage."
+                        ),
+                        html.Li(
+                            "Datasets previously fetched are cached in user's browser session storage (reduces database calls)."
+                        ),
+                        html.Li("Responsive layout (responds to viewer device size)."),
+                        html.Li("Basic user authentication (username+password)."),
+                        html.Li(
+                            "Grid of plots of the selected dataset (`Data Visualisations` page)."
+                        ),
+                        html.Li("Table-view of the raw data (`Raw Data` page)."),
+                        html.Li(
+                            "Button to download CSV version of the raw data (`Raw Data` page)."
+                        ),
+                        html.Li(
+                            "User activity on the dashboard is logged (`Dashboard Activity Log` page)."
+                        ),
+                    ],
+                ),
+            ]
+        )
 
 
-# @app.callback(
-#     Output("user-session-data", "data")
-#     # Output("selected-dataset-alert", "children"),
-#     [Input(f"select-dataset-{idx}", "n_clicks") for idx, _ in enumerate(data)],
-# )
-# def update_selected_dataset(*args):
-#     """docstring TODO"""
-#     ctx = dash.callback_context
-#
-#     if not ctx.triggered:
-#         return "No dataset selected"
-#     else:
-#         button_id = ctx.triggered[0]["prop_id"].split(".")[0]
-#
-#     if button_id[:15] == "select-dataset-":
-#         selected_dataset_idx: int = int(button_id.split("-")[2])
-#         return "Dataset Selected: " + list(data.keys())[selected_dataset_idx]
-#
-
-# @app.callback(
-#     Output("selected-dataset-alert", "children"),
-#     [Input(f"select-dataset-{idx}", "n_clicks") for idx, _ in enumerate(data)],
-# )
-# def update_selected_dataset(*args):
-#     """docstring TODO"""
-#     ctx = dash.callback_context
-#
-#     if not ctx.triggered:
-#         return "No dataset selected"
-#     else:
-#         button_id = ctx.triggered[0]["prop_id"].split(".")[0]
-#
-#     if button_id[:15] == "select-dataset-":
-#         selected_dataset_idx: int = int(button_id.split("-")[2])
-#         return "Dataset Selected: " + list(data.keys())[selected_dataset_idx]
-
-
-# @app.callback(
-#     Output("page-content", "children"),
-#     [
-#         Input("url", "pathname"),
-#         #         Input("select-dataset1", "n_clicks"),
-#         #         Input("select-dataset2", "n_clicks"),
-#         #         Input("select-dataset3", "n_clicks"),
-#     ],
-# )
-# def render_page_content(pathname):
-#     """docstring TODO"""
-# #     global global_log_strings
-# # #     global global_current_dataset_id
-#     global global_current_page_url
-#
-#     ctx = dash.callback_context
-#     if ctx.triggered_id in ("select-dataset1", "select-dataset2", "select-dataset3"):
-#         dataset_id = int(ctx.triggered_id[-1])
-#         if dataset_id != global_current_dataset_id:
-#             global_current_dataset_id = dataset_id
-#             global_log_strings = [
-#                 f"{datetime_now_str()} Selected dataset {dataset_id}",
-#                 html.Br(),
-#             ] + global_log_strings
-#
-# if pathname == "/":
-#         if global_current_page_url != pathname:
-#             global_current_page_url = pathname
-#             global_log_strings = [
-#                 f"{datetime_now_str()} Visited Welcome page",
-#                 html.Br(),
-#             ] + global_log_strings
-#         return dbc.Container(
-#             [
-#                 html.Br(),
-#                 "This is an example of a dashboard built in python using Plotly Dash.",
-#                 html.Br(),
-#                 html.Br(),
-#                 "The current features are:",
-#                 html.Ul(
-#                     [
-#                         html.Li("Responsive layout (responds to viewer device size)."),
-#                         html.Li("Basic user authentication (username+password)."),
-#                         html.Li(
-#                             "Dataset selector (user can choose their dataset) - at top of every page."
-#                         ),
-#                         html.Li(
-#                             "Grid of plots of the selected dataset (`Data Visualisations` page)."
-#                         ),
-#                         html.Li("Table-view of the raw data (`Raw Data` page)."),
-#                         html.Li(
-#                             "Button to download CSV version of the raw data (`Raw Data` page)."
-#                         ),
-#                         html.Li(
-#                             "User activity on the dashboard is logged (`Dashboard Activity Log` page)."
-#                         ),
-#                     ],
-#                 ),
-#                 html.Br(),
-#                 html.P("In future I want to add:"),
-#                 html.Ul(
-#                     [
-#                         html.Li("Page loading animations"),
-#                         html.Li("User can switch between light and dark mode."),
-#                     ],
-#                 ),
-#             ]
-#         )
 #     elif pathname == "/data":
 #         if global_current_page_url != pathname:
 #             global_current_page_url = pathname

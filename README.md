@@ -54,6 +54,8 @@ Here is how dataset selection works:
 
 Known issues not yet fixed:
 
+- The popup saying that the data has been fetched from the database does not wait for the database call to finish before appearing
+
 - Plots on small screens are being cropped on Firefox browser (this is to do with the Firefox implementation of the `zoom` CSS property)
 
 - The dashboard does not look good yet on very large screens (there is wasted space)
