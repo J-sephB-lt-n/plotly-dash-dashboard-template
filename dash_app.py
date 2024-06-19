@@ -245,7 +245,12 @@ if args.debug:
         State("user-session-data", "data"),
     )
     def debug_user_session_data(_, user_session_data):
-        return datetime.datetime.now().strftime("%H:%M:%S ") + str(user_session_data)
+        return datetime.datetime.now().strftime("%H:%M:%S ") + str(
+            {
+                k: (list(v.keys()) if k == "cached_datasets" else v)
+                for k, v in user_session_data.items()
+            }
+        )
 
 
 # Actions triggered by global buttons
@@ -279,7 +284,11 @@ def update_user_session(
     #     # you don't want to update the store for nothing.
     #     raise PreventUpdate
     #
-    current_dataset_alert_text = "No dataset selected"
+    current_dataset_name = user_session_data.get("currently_selected_dataset")
+    if current_dataset_name is None:
+        current_dataset_alert_text = "No dataset selected"
+    else:
+        current_dataset_alert_text = f"Dataset Selected: [ {current_dataset_name} ]"
 
     user_session_data = user_session_data or {
         "currently_selected_dataset": None,
