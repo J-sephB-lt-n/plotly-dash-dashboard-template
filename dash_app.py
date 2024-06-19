@@ -136,7 +136,11 @@ content = dbc.Container(
             # stores user-specific state, caches datasets, logs user activity
             id="user-session-data",
             storage_type="session",
-            data={"available_datasets": []},
+            data={
+                "available_datasets": [],
+                "cached_datasets": {},
+                "currently_selected_dataset": None,
+            },
         ),
         dbc.Stack(
             [
@@ -310,14 +314,10 @@ def toggle_modal(n1, n2, is_open):
 
 @app.callback(
     Output("page-content", "children"),
-    [
-        Input("url", "pathname"),
-        #         Input("select-dataset1", "n_clicks"),
-        #         Input("select-dataset2", "n_clicks"),
-        #         Input("select-dataset3", "n_clicks"),
-    ],
+    Input("url", "pathname"),
+    State("user-session-data", "data"),
 )
-def render_page_content(pathname):
+def render_page_content(pathname, user_session_data):
     """docstring TODO"""
     if pathname == "/":
         return dbc.Container(
@@ -355,30 +355,36 @@ def render_page_content(pathname):
             ]
         )
 
+    if pathname == "/data":
+        if (
+            user_session_data
+            and user_session_data["currently_selected_dataset"]
+            in user_session_data["cached_datasets"]
+        ):
+            current_dataset_table = dash_table.DataTable(
+                user_session_data["cached_datasets"][
+                    user_session_data["currently_selected_dataset"]
+                ],
+                **DATA_TABLE_STYLE,
+            )
+        else:
+            current_dataset_table = html.P("Please select a dataset")
 
-#     elif pathname == "/data":
-#         if global_current_page_url != pathname:
-#             global_current_page_url = pathname
-#             global_log_strings = [
-#                 f"{datetime_now_str()} Visited Raw Data page",
-#                 html.Br(),
-#             ] + global_log_strings
-#         return dbc.Stack(
-#             [
-#                 dbc.Col(
-#                     dbc.Button("Download CSV", id="download_csv_button", n_clicks=0),
-#                 ),
-#                 dcc.Download(id="download-csv"),
-#                 dbc.Col(
-#                     dash_table.DataTable(
-#                         data[global_current_dataset_id],
-#                         **DATA_TABLE_STYLE,
-#                     ),
-#                 ),
-#             ],
-#             direction="vertical",
-#             gap=3,
-#         )
+        return dbc.Stack(
+            [
+                dbc.Col(
+                    dbc.Button("Download CSV", id="download_csv_button", n_clicks=0),
+                ),
+                dcc.Download(id="download-csv"),
+                dbc.Col(
+                    current_dataset_table,
+                ),
+            ],
+            direction="vertical",
+            gap=3,
+        )
+
+
 #     elif pathname == "/dataviz":
 #         if global_current_page_url != pathname:
 #             global_current_page_url = pathname
