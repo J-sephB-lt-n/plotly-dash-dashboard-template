@@ -104,13 +104,23 @@ navbar = dbc.Nav(
                 ),
                 dbc.Nav(
                     [
-                        dbc.NavLink("Welcome", href="/", active="exact"),
-                        dbc.NavLink("Raw Data", href="/data", active="exact"),
                         dbc.NavLink(
-                            "Data Visualisations", href="/dataviz", active="exact"
+                            "Welcome", href="/", active="exact", id="welcome-pagelink"
                         ),
                         dbc.NavLink(
-                            "Dashboard Activity Log", href="/log", active="exact"
+                            "Raw Data", href="/data", active="exact", id="data-pagelink"
+                        ),
+                        dbc.NavLink(
+                            "Data Visualisations",
+                            href="/dataviz",
+                            active="exact",
+                            id="dataviz-pagelink",
+                        ),
+                        dbc.NavLink(
+                            "Dashboard Activity Log",
+                            href="/log",
+                            active="exact",
+                            id="activity-log-pagelink",
                         ),
                     ],
                     vertical=True,
@@ -142,6 +152,7 @@ content = dbc.Container(
                 "available_datasets": [],
                 "cached_datasets": {},
                 "currently_selected_dataset": None,
+                "current_page": "/",
             },
         ),
         dbc.Stack(
@@ -247,28 +258,44 @@ if args.debug:
     [
         Input("refresh-data-button", "n_clicks"),
         Input({"type": "selected-dataset", "index": ALL}, "n_clicks"),
+        Input("welcome-pagelink", "n_clicks"),
+        Input("data-pagelink", "n_clicks"),
+        Input("dataviz-pagelink", "n_clicks"),
+        Input("activity-log-pagelink", "n_clicks"),
     ],
     State("user-session-data", "data"),
 )
-def update_user_session(data_refresh_n_clicks, data_select_n_clicks, user_session_data):
-    if data_refresh_n_clicks is None or data_select_n_clicks is None:
-        # prevent the None callbacks is important with the store component.
-        # you don't want to update the store for nothing.
-        raise PreventUpdate
+def update_user_session(
+    data_refresh_n_clicks,
+    data_select_n_clicks,
+    welcome,
+    data,
+    dataviz,
+    log,
+    user_session_data,
+):
+    # if data_refresh_n_clicks is None or data_select_n_clicks is None:
+    #     # prevent the None callbacks is important with the store component.
+    #     # you don't want to update the store for nothing.
+    #     raise PreventUpdate
+    #
     current_dataset_alert_text = "No dataset selected"
 
     user_session_data = user_session_data or {
         "currently_selected_dataset": None,
         "available_datasets": db.list_available_datasets(),
         "cached_datasets": {},
+        "current_page": "/",
     }
 
     button_clicked = ctx.triggered_id
+
     if button_clicked == "refresh-data-button":
         user_session_data = {
             "currently_selected_dataset": None,
             "available_datasets": db.list_available_datasets(),
             "cached_datasets": {},
+            "current_page": "/",
         }
 
     if hasattr(button_clicked, "type") and button_clicked.type == "selected-dataset":
@@ -281,6 +308,15 @@ def update_user_session(data_refresh_n_clicks, data_select_n_clicks, user_sessio
             user_session_data["cached_datasets"][selected_dataset_name] = (
                 db.get_dataset(selected_dataset_name)
             )
+
+    if button_clicked == "welcome-pagelink":
+        user_session_data["current_page"] = "/"
+    if button_clicked == "data-pagelink":
+        user_session_data["current_page"] = "data"
+    if button_clicked == "dataviz-pagelink":
+        user_session_data["current_page"] = "dataviz"
+    if button_clicked == "activity-log-pagelink":
+        user_session_data["current_page"] = "log"
 
     # patched_children = Patch()
     patched_children = []
@@ -316,11 +352,16 @@ def toggle_modal(n1, n2, is_open):
 
 @app.callback(
     Output("page-content", "children"),
-    Input("url", "pathname"),
+    [
+        Input("url", "pathname"),
+        Input({"type": "selected-dataset", "index": ALL}, "n_clicks"),
+    ],
     State("user-session-data", "data"),
 )
-def render_page_content(pathname, user_session_data):
+def render_page_content(pathname, select_dataset, user_session_data):
     """docstring TODO"""
+    if pathname is None:
+        pathname = user_session_data["current_page"]
     if pathname == "/":
         return dbc.Container(
             [
@@ -358,17 +399,16 @@ def render_page_content(pathname, user_session_data):
         )
 
     if pathname == "/data":
-        if not (
-            user_session_data is not None
-            and user_session_data["currently_selected_dataset"]
-            in user_session_data["cached_datasets"]
-        ):
+        selected_dataset_name = user_session_data["currently_selected_dataset"]
+        selected_dataset = user_session_data["cached_datasets"].get(
+            selected_dataset_name
+        )
+
+        if selected_dataset_name is None:
             current_dataset_table = dbc.Alert("Please select a dataset", color="light")
         else:
             current_dataset_table = dash_table.DataTable(
-                user_session_data["cached_datasets"][
-                    user_session_data["currently_selected_dataset"]
-                ],
+                selected_dataset,
                 **DATA_TABLE_STYLE,
             )
 
@@ -396,13 +436,13 @@ def render_page_content(pathname, user_session_data):
         else:
             current_dataset_name = user_session_data["currently_selected_dataset"]
             current_dataset = user_session_data["cached_datasets"][current_dataset_name]
-            selected_dataset_df = pd.DataFrame(current_dataset).sort_values("group")
             return dbc.Stack(
                 [
                     dbc.Col(
+                        # dash_table.DataTable(current_dataset)
                         dcc.Graph(
                             figure=px.line(
-                                selected_dataset_df,
+                                current_dataset,
                                 x="time",
                                 y="amount",
                                 color="group",
@@ -413,7 +453,7 @@ def render_page_content(pathname, user_session_data):
                     dbc.Col(
                         dcc.Graph(
                             figure=px.bar(
-                                selected_dataset_df,
+                                current_dataset,
                                 x="time",
                                 y="amount",
                                 color="group",
@@ -426,41 +466,31 @@ def render_page_content(pathname, user_session_data):
                             dbc.Col(
                                 dcc.Graph(
                                     figure=px.histogram(
-                                        selected_dataset_df,
+                                        current_dataset,
                                         x="amount",
                                         # y="",
                                         color="group",
                                         marginal="box",
                                         title="Overlaid Histograms",
                                     ).update_layout(**PLOT_STYLE)
-                                    # figure=ff.create_distplot(
-                                    #     [
-                                    #         [
-                                    #             x["amount"]
-                                    #             for x in data[global_current_dataset_id]
-                                    #             if x["group"] == group
-                                    #         ]
-                                    #         for group in ("A", "B", "C")
-                                    #     ],
-                                    #     ["A", "B", "C"],
-                                    # ).update_layout(**PLOT_STYLE)
                                 ),
                                 width=8,
                             ),
-                            dbc.Col(
-                                dcc.Graph(
-                                    figure=px.pie(
-                                        selected_dataset_df.groupby("group")
-                                        .agg(sum_amount=("amount", "sum"))
-                                        .reset_index()
-                                        .sort_values("group"),
-                                        values="sum_amount",
-                                        names="group",
-                                        title="Pie Chart",
-                                    ).update_layout(**PLOT_STYLE)
-                                ),
-                                width=4,
-                            ),
+                            # dbc.Col(
+                            #     dcc.Graph(
+                            #         figure=px.pie(
+                            #             (
+                            #                 current_dataset,
+                            #                 .agg(sum_amount=("amount", "sum"))
+                            #                 .reset_index()
+                            #             ),
+                            #             values="sum_amount",
+                            #             names="group",
+                            #             title="Pie Chart",
+                            #         ).update_layout(**PLOT_STYLE)
+                            #     ),
+                            #     width=4,
+                            # ),
                         ],
                         direction="horizontal",
                     ),
