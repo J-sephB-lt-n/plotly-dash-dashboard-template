@@ -8,14 +8,11 @@ TODO:
 
 import argparse
 import datetime
-import json
 from typing import Final
 
-import dash
 import dash_bootstrap_components as dbc
-import pandas as pd
 import plotly.express as px
-from dash import Dash, dash_table, Input, Output, State, dcc, html, ctx, Patch, ALL
+from dash import Dash, dash_table, Input, Output, State, dcc, html, ctx, ALL
 from dash.exceptions import PreventUpdate
 from dash_auth import BasicAuth
 
@@ -332,17 +329,6 @@ def update_user_session(
             user_session_data["available_datasets"]
         )
     ]
-    # patched_children = []
-    # for dataset_index, dataset_name in enumerate(
-    #     user_session_data["available_datasets"]
-    # ):
-    #     patched_children.append(
-    #         dbc.DropdownMenuItem(
-    #             dataset_name,
-    #             id={"type": "selected-dataset", "index": dataset_index},
-    #             n_clicks=0,
-    #         )
-    #     )
 
     current_dataset_name = user_session_data.get("currently_selected_dataset")
     if current_dataset_name is None:

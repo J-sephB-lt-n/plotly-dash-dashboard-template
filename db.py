@@ -8,7 +8,7 @@ import time
 
 
 def list_available_datasets():
-    """docstring TODO"""
+    """List datasets currently in the database"""
     time.sleep(2)  # simulate some waiting time
     return sorted(
         [
@@ -20,8 +20,17 @@ def list_available_datasets():
 
 
 def get_dataset(dataset_name: str) -> list[dict]:
-    """docstring TODO"""
+    """Fetches a dataset from the database"""
     time.sleep(2)  # simulate some waiting time
     with open(f"database/{dataset_name}", "r", encoding="utf-8") as file:
         csv_reader = csv.DictReader(file)
-        return list(csv_reader)
+        type_map = {
+            "dataset": str,
+            "time": int,
+            "group": str,
+            "amount": int,
+        }
+        return [
+            {colname: type_map[colname](value) for colname, value in row.items()}
+            for row in csv_reader
+        ]
