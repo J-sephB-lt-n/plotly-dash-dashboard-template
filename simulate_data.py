@@ -51,9 +51,9 @@ dataset_ids: list[str] = [
     (datetime_now + relativedelta(months=x)).strftime("%Y-%m")
     for x in range(args.n_datasets)
 ]
-group_names: list[str] = [string.ascii_uppercase[i] for i in range(args.n_groups)]
-group_means: list[int] = [random.randint(10, 100) for _ in range(args.n_groups)]
 for dataset_id in dataset_ids:
+    group_names: list[str] = [string.ascii_uppercase[i] for i in range(args.n_groups)]
+    group_means: list[int] = [random.randint(10, 100) for _ in range(args.n_groups)]
     datasets[dataset_id] = []
     for group_name, group_mean in zip(group_names, group_means):
         for t in range(args.n_rows_per_group):
