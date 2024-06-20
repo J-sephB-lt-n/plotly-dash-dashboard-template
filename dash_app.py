@@ -284,11 +284,6 @@ def update_user_session(
     #     # you don't want to update the store for nothing.
     #     raise PreventUpdate
     #
-    current_dataset_name = user_session_data.get("currently_selected_dataset")
-    if current_dataset_name is None:
-        current_dataset_alert_text = "No dataset selected"
-    else:
-        current_dataset_alert_text = f"Dataset Selected: [ {current_dataset_name} ]"
 
     user_session_data = user_session_data or {
         "currently_selected_dataset": None,
@@ -312,7 +307,6 @@ def update_user_session(
             button_clicked.index
         ]
         user_session_data["currently_selected_dataset"] = selected_dataset_name
-        current_dataset_alert_text = f"Dataset Selected: [ {selected_dataset_name} ]"
         if selected_dataset_name not in user_session_data["cached_datasets"]:
             user_session_data["cached_datasets"][selected_dataset_name] = (
                 db.get_dataset(selected_dataset_name)
@@ -328,19 +322,35 @@ def update_user_session(
         user_session_data["current_page"] = "log"
 
     # patched_children = Patch()
-    patched_children = []
-    for dataset_index, dataset_name in enumerate(
-        user_session_data["available_datasets"]
-    ):
-        patched_children.append(
-            dbc.DropdownMenuItem(
-                dataset_name,
-                id={"type": "selected-dataset", "index": dataset_index},
-                n_clicks=0,
-            )
+    dataset_selection_options = [
+        dbc.DropdownMenuItem(
+            dataset_name,
+            id={"type": "selected-dataset", "index": dataset_index},
+            n_clicks=0,
         )
+        for dataset_index, dataset_name in enumerate(
+            user_session_data["available_datasets"]
+        )
+    ]
+    # patched_children = []
+    # for dataset_index, dataset_name in enumerate(
+    #     user_session_data["available_datasets"]
+    # ):
+    #     patched_children.append(
+    #         dbc.DropdownMenuItem(
+    #             dataset_name,
+    #             id={"type": "selected-dataset", "index": dataset_index},
+    #             n_clicks=0,
+    #         )
+    #     )
 
-    return patched_children, current_dataset_alert_text, user_session_data
+    current_dataset_name = user_session_data.get("currently_selected_dataset")
+    if current_dataset_name is None:
+        current_dataset_alert_text = "No dataset selected"
+    else:
+        current_dataset_alert_text = f"Dataset Selected: [ {current_dataset_name} ]"
+
+    return dataset_selection_options, current_dataset_alert_text, user_session_data
 
 
 # Popup telling the user that the latest data has been fetched
