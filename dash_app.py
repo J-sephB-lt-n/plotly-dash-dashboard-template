@@ -299,7 +299,7 @@ def update_user_session(
             "currently_selected_dataset": None,
             "available_datasets": db.list_available_datasets(),
             "cached_datasets": {},
-            "current_page": "/",
+            "current_page": user_session_data.get("current_page"),
         }
 
     if hasattr(button_clicked, "type") and button_clicked.type == "selected-dataset":
