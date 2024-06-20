@@ -195,6 +195,7 @@ content = dbc.Container(
                     color="#2a9fd6",
                     # debounce=500,
                 ),
+                dbc.Col(html.Br()),
             ],
             direction="vertical",
             gap=3,
