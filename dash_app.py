@@ -33,7 +33,7 @@ arg_parser.add_argument(
     help="Make dashboard available (over http) over public internet",
     action="store_true",  # state if this flag is present
 )
-args = arg_parser.parse_args()
+args, unknown = arg_parser.parse_known_args()
 
 app = Dash(
     __name__,
