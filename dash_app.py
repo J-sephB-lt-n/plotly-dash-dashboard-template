@@ -12,6 +12,7 @@ import itertools
 from typing import Final
 
 import dash_bootstrap_components as dbc
+import dash_loading_spinners as dls
 import plotly.express as px
 from dash import Dash, dash_table, Input, Output, State, dcc, html, ctx, ALL
 from dash.exceptions import PreventUpdate
@@ -167,28 +168,31 @@ content = dbc.Container(
                     gap=3,
                     id="content-row1-stack",
                 ),
-                dbc.Modal(
-                    [
-                        dbc.ModalHeader(dbc.ModalTitle("Data Refreshed")),
-                        dbc.ModalBody(
-                            "The list of currently available datasets has been fetched from the database"
-                        ),
-                        dbc.ModalFooter(
-                            dbc.Button(
-                                "Close",
-                                id="close-data-refresh-popup",
-                                className="ms-auto",
-                                n_clicks=0,
-                            )
-                        ),
-                    ],
-                    id="data-refresh-popup",
-                    is_open=False,
-                ),
-                dbc.Alert(
-                    id="selected-dataset-alert",
-                    color="light",
-                    # children="No dataset selected",
+                # dbc.Modal(
+                #     [
+                #         dbc.ModalHeader(dbc.ModalTitle("Data Refreshed")),
+                #         dbc.ModalBody(
+                #             "The list of currently available datasets has been fetched from the database"
+                #         ),
+                #         dbc.ModalFooter(
+                #             dbc.Button(
+                #                 "Close",
+                #                 id="close-data-refresh-popup",
+                #                 className="ms-auto",
+                #                 n_clicks=0,
+                #             )
+                #         ),
+                #     ],
+                #     id="data-refresh-popup",
+                #     is_open=False,
+                # ),
+                dls.Hash(
+                    dbc.Alert(
+                        id="selected-dataset-alert",
+                        color="light",
+                        # children="No dataset selected",
+                    ),
+                    color="red",
                 ),
             ],
             direction="vertical",
@@ -200,9 +204,7 @@ content = dbc.Container(
     id="main-content",
 )
 
-app.layout = dbc.Container(
-    [dcc.Location(id="url"), navbar, content],
-)
+app.layout = dbc.Container([dcc.Location(id="url"), navbar, content])
 
 if args.debug:
 
@@ -329,20 +331,20 @@ def update_user_session(
     return dataset_selection_options, current_dataset_alert_text, user_session_data
 
 
-# Popup telling the user that the latest data has been fetched
-# from the database
-@app.callback(
-    Output("data-refresh-popup", "is_open"),
-    [
-        Input("refresh-data-button", "n_clicks"),
-        Input("close-data-refresh-popup", "n_clicks"),
-    ],
-    [State("data-refresh-popup", "is_open")],
-)
-def toggle_modal(n1, n2, is_open):
-    if n1 or n2:
-        return not is_open
-    return is_open
+# # Popup telling the user that the latest data has been fetched
+# # from the database
+# @app.callback(
+#     Output("data-refresh-popup", "is_open"),
+#     [
+#         Input("refresh-data-button", "n_clicks"),
+#         Input("close-data-refresh-popup", "n_clicks"),
+#     ],
+#     [State("data-refresh-popup", "is_open")],
+# )
+# def toggle_modal(n1, n2, is_open):
+#     if n1 or n2:
+#         return not is_open
+#     return is_open
 
 
 @app.callback(
