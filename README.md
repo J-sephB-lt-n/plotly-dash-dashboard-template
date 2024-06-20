@@ -26,6 +26,9 @@ python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 python dash_app.py
+# feature flags:
+python dash_app.py --debug # shows diagnostic information on the dashboard (for dev)
+python dash_app.py --expose_to_public_internet # make available over http from anywhere
 ```
 
 Deploy on a Google Cloud Run service:
@@ -54,10 +57,8 @@ Here is how dataset selection works:
 
 Known issues not yet fixed:
 
-- The popup saying that the data has been fetched from the database does not wait for the database call to finish before appearing
+- The code needs a clean and refactor (very messy)
 
 - Plots on small screens are being cropped on Firefox browser (this is to do with the Firefox implementation of the `zoom` CSS property)
 
 - The dashboard does not look good yet on very large screens (there is wasted space)
-
-- The order of groups in the plots is not consistent
