@@ -186,13 +186,14 @@ content = dbc.Container(
                 #     id="data-refresh-popup",
                 #     is_open=False,
                 # ),
-                dls.Hash(
+                dls.Triangle(
                     dbc.Alert(
                         id="selected-dataset-alert",
                         color="light",
                         # children="No dataset selected",
                     ),
-                    color="red",
+                    color="#2a9fd6",
+                    # debounce=500,
                 ),
             ],
             direction="vertical",
