@@ -572,6 +572,6 @@ def download_csv(n_clicks, user_session_data):
 
 if __name__ == "__main__":
     if args.expose_to_public_internet:
-        app.run_server(debug=False, host="0.0.0.0", port=8888)
+        app.run_server(debug=False, host="0.0.0.0", port=8080)
     else:
-        app.run_server(debug=True, port=8888)
+        app.run_server(debug=True, port=8080)
