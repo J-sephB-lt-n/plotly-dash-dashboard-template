@@ -8,6 +8,7 @@ TODO:
 
 import argparse
 import datetime
+import itertools
 from typing import Final
 
 import dash_bootstrap_components as dbc
@@ -112,12 +113,6 @@ navbar = dbc.Nav(
                             href="/dataviz",
                             active="exact",
                             id="dataviz-pagelink",
-                        ),
-                        dbc.NavLink(
-                            "Dashboard Activity Log",
-                            href="/log",
-                            active="exact",
-                            id="activity-log-pagelink",
                         ),
                     ],
                     vertical=True,
@@ -263,24 +258,21 @@ if args.debug:
         Input("welcome-pagelink", "n_clicks"),
         Input("data-pagelink", "n_clicks"),
         Input("dataviz-pagelink", "n_clicks"),
-        Input("activity-log-pagelink", "n_clicks"),
     ],
     State("user-session-data", "data"),
 )
 def update_user_session(
-    data_refresh_n_clicks,
-    data_select_n_clicks,
+    data_refresh,
+    data_select,
     welcome,
     data,
     dataviz,
-    log,
     user_session_data,
 ):
-    # if data_refresh_n_clicks is None or data_select_n_clicks is None:
-    #     # prevent the None callbacks is important with the store component.
-    #     # you don't want to update the store for nothing.
-    #     raise PreventUpdate
-    #
+    if all(var is None for var in (data_refresh, data_select, welcome, data, dataviz)):
+        # prevent the None callbacks is important with the store component.
+        # you don't want to update the store for nothing.
+        raise PreventUpdate
 
     user_session_data = user_session_data or {
         "currently_selected_dataset": None,
@@ -315,8 +307,6 @@ def update_user_session(
         user_session_data["current_page"] = "data"
     if button_clicked == "dataviz-pagelink":
         user_session_data["current_page"] = "dataviz"
-    if button_clicked == "activity-log-pagelink":
-        user_session_data["current_page"] = "log"
 
     # patched_children = Patch()
     dataset_selection_options = [
@@ -395,9 +385,6 @@ def render_page_content(pathname, select_dataset, user_session_data):
                         html.Li(
                             "Button to download CSV version of the raw data (`Raw Data` page)."
                         ),
-                        html.Li(
-                            "User activity on the dashboard is logged (`Dashboard Activity Log` page)."
-                        ),
                     ],
                 ),
             ]
@@ -441,6 +428,18 @@ def render_page_content(pathname, select_dataset, user_session_data):
         else:
             current_dataset_name = user_session_data["currently_selected_dataset"]
             current_dataset = user_session_data["cached_datasets"][current_dataset_name]
+            grouped_current_dataset = [
+                # to understand this complex comprehension, refer to:
+                # https://github.com/J-sephB-lt-n/useful-code-snippets/blob/main/snippets/python/data/native_groupby_agg.py
+                {
+                    "group": group_name,
+                    "sum_amount": sum([row["amount"] for row in group_rows]),
+                }
+                for group_name, group_rows in itertools.groupby(
+                    sorted(current_dataset, key=lambda x: x["group"]),
+                    key=lambda x: x["group"],
+                )
+            ]
             return dbc.Stack(
                 [
                     dbc.Col(
@@ -473,7 +472,6 @@ def render_page_content(pathname, select_dataset, user_session_data):
                                     figure=px.histogram(
                                         current_dataset,
                                         x="amount",
-                                        # y="",
                                         color="group",
                                         marginal="box",
                                         title="Overlaid Histograms",
@@ -481,21 +479,27 @@ def render_page_content(pathname, select_dataset, user_session_data):
                                 ),
                                 width=8,
                             ),
-                            # dbc.Col(
-                            #     dcc.Graph(
-                            #         figure=px.pie(
-                            #             (
-                            #                 current_dataset,
-                            #                 .agg(sum_amount=("amount", "sum"))
-                            #                 .reset_index()
-                            #             ),
-                            #             values="sum_amount",
-                            #             names="group",
-                            #             title="Pie Chart",
-                            #         ).update_layout(**PLOT_STYLE)
-                            #     ),
-                            #     width=4,
-                            # ),
+                            dbc.Col(
+                                # dash_table.DataTable(
+                                #     grouped_current_dataset,
+                                #     **DATA_TABLE_STYLE,
+                                # ),
+                                dcc.Graph(
+                                    figure=px.pie(
+                                        grouped_current_dataset,
+                                        values="sum_amount",
+                                        names="group",
+                                        title="Pie Chart",
+                                        category_orders={
+                                            "group": [
+                                                x["group"]
+                                                for x in grouped_current_dataset
+                                            ]
+                                        },
+                                    ).update_layout(**PLOT_STYLE)
+                                ),
+                                width=4,
+                            ),
                         ],
                         direction="horizontal",
                     ),
@@ -504,9 +508,6 @@ def render_page_content(pathname, select_dataset, user_session_data):
                 gap=0,
                 id="plot-stack",
             )
-
-    if pathname == "/log":
-        return html.P("!! this page still under construction !!")
 
 
 #     # If the user tries to reach a different page, return a 404 message
