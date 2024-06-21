@@ -85,6 +85,12 @@ PLOT_STYLE: Final[dict] = {
     "title_font": {"color": "white"},
     "legend": dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
 }
+LOADING_SPINNER_STYLE: Final[dict] = {
+    "obj": dls.Triangle,
+    "args": {
+        "color": "#2a9fd6",
+    },
+}
 
 
 def datetime_now_str() -> str:
@@ -186,13 +192,15 @@ content = dbc.Container(
                 #     id="data-refresh-popup",
                 #     is_open=False,
                 # ),
-                dls.Triangle(
+                LOADING_SPINNER_STYLE["obj"](
+                    # dls.Triangle(
                     dbc.Alert(
                         id="selected-dataset-alert",
                         color="light",
                         # children="No dataset selected",
                     ),
-                    color="#2a9fd6",
+                    **LOADING_SPINNER_STYLE["args"],
+                    # color="#2a9fd6",
                     # debounce=500,
                 ),
                 dbc.Col(html.Br()),
