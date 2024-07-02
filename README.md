@@ -10,6 +10,8 @@ How it looks on a mobile phone (iPhone XR):
 
 <img src="./screenshots/iphone-xr.png" width="250"/>
 
+I apologise for the somewhat messy code (no modularisation etc.). I would enjoy cleaning up the codebase, but I want to go and learn new things more!
+
 Simulate data to show in the dashboard:
 
 ```bash
